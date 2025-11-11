@@ -18,8 +18,9 @@ impl<'a> Game<'a> {
     fn new(assets: &'a Assets) -> Self {
         let world = World::default();
 
-        let world_width = ((world.x_max - world.x_min) * 8) as f32 + 16.0 * 16.0;
-        let world_height = ((world.y_max - world.y_min) * 8) as f32 + 16.0 * 16.0;
+        let world_width = ((world.x_max - world.x_min) * 16) as f32 + 16.0 * 16.0;
+        let world_height = ((world.y_max - world.y_min) * 16) as f32 + 16.0 * 16.0;
+        dbg!(world_width, world_height);
 
         // render world
         let mut world_camera_bg = create_camera(world_width, world_height);
@@ -49,8 +50,11 @@ impl<'a> Game<'a> {
 
         let pixel_camera = create_camera(SCREEN_WIDTH, SCREEN_HEIGHT);
 
+        let mut player = Player::new();
+        player.pos = world.get_interactable_spawn(16).unwrap();
+
         Self {
-            player: Player::new(),
+            player,
             assets,
             world,
             pixel_camera,
@@ -65,7 +69,7 @@ impl<'a> Game<'a> {
         let scale_factor =
             (actual_screen_width / SCREEN_WIDTH).min(actual_screen_height / SCREEN_HEIGHT);
 
-        self.player.update(delta_time);
+        self.player.update(delta_time, &self.world);
         self.pixel_camera.target = self.player.camera_pos.floor();
         set_camera(&self.pixel_camera);
         clear_background(BLACK);
@@ -73,16 +77,16 @@ impl<'a> Game<'a> {
         // draw world texture
         draw_texture_ex(
             &self.world_camera_bg.render_target.as_ref().unwrap().texture,
-            (self.world.x_min) as f32 * 8.0,
-            (self.world.y_min) as f32 * 8.0,
+            (self.world.x_min * 16) as f32,
+            (self.world.y_min * 16) as f32,
             WHITE,
             DrawTextureParams::default(),
         );
         self.player.draw(self.assets);
         draw_texture_ex(
             &self.world_camera_fg.render_target.as_ref().unwrap().texture,
-            (self.world.x_min) as f32 * 8.0,
-            (self.world.y_min) as f32 * 8.0,
+            (self.world.x_min * 16) as f32,
+            (self.world.y_min * 16) as f32,
             WHITE,
             DrawTextureParams::default(),
         );
