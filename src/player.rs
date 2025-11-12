@@ -21,9 +21,14 @@ impl Player {
     pub fn update(&mut self, delta_time: f32, world: &World) {
         let axis = get_input_axis();
         if axis.length() > 0.0 {
-            self.velocity += axis.normalize() * delta_time * 1550.0;
+            self.velocity += axis.normalize() * delta_time * 3600.0;
         }
-        self.velocity = self.velocity.clamp_length_max(2.0 * 70.0);
+
+        let friction = if axis.length() == 0.0 { 20.0 } else { 10.0 } * delta_time;
+        self.velocity = self
+            .velocity
+            .clamp_length_max(2.0 * 70.0)
+            .lerp(Vec2::ZERO, friction);
         let new = update_physicsbody(self.pos, &mut self.velocity, delta_time, &world.collision);
         self.pos = new;
         self.camera_pos = self.pos
