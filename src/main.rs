@@ -1,8 +1,9 @@
 use macroquad::{miniquad::window::screen_size, prelude::*};
 
-use crate::{assets::*, player::*, utils::*};
+use crate::{assets::*, enemy::*, player::*, utils::*};
 
 mod assets;
+mod enemy;
 mod player;
 mod utils;
 
@@ -14,6 +15,7 @@ struct Game<'a> {
     world_camera_bg: Camera2D,
     world_camera_fg: Camera2D,
     stars: StarsBackground,
+    enemies: Vec<Enemy>,
 }
 impl<'a> Game<'a> {
     fn new(assets: &'a Assets) -> Self {
@@ -53,6 +55,14 @@ impl<'a> Game<'a> {
         let mut player = Player::new();
         player.pos = world.get_interactable_spawn(16).unwrap();
 
+        let test_enemy = Enemy {
+            ty: &GREENO,
+            pos: world.get_interactable_spawn(32).unwrap(),
+            health: 20.0,
+            animation_time: 0.0,
+            moving_left: false,
+        };
+
         Self {
             player,
             assets,
@@ -60,6 +70,7 @@ impl<'a> Game<'a> {
             pixel_camera,
             world_camera_bg,
             world_camera_fg,
+            enemies: vec![test_enemy],
             stars: StarsBackground::new(),
         }
     }
@@ -84,6 +95,10 @@ impl<'a> Game<'a> {
             WHITE,
             DrawTextureParams::default(),
         );
+        for enemy in self.enemies.iter_mut() {
+            enemy.update(delta_time, &mut self.player);
+            enemy.draw(self.assets);
+        }
         self.player.draw(self.assets);
         draw_texture_ex(
             &self.world_camera_fg.render_target.as_ref().unwrap().texture,

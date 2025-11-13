@@ -12,6 +12,7 @@ pub struct Player {
     pub animation_time: f32,
     pub walking: bool,
     pub moving_left: bool,
+    pub health: f32,
 }
 impl Player {
     pub fn new() -> Self {
@@ -22,6 +23,7 @@ impl Player {
             animation_time: 0.0,
             walking: false,
             moving_left: false,
+            health: 100.0,
         }
     }
     pub fn update(&mut self, delta_time: f32, world: &World) {

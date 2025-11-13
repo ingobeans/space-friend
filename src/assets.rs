@@ -7,6 +7,7 @@ use crate::utils::*;
 pub struct Assets {
     pub tileset: Spritesheet,
     pub player: AnimationsGroup,
+    pub enemies: AnimationsGroup,
 }
 impl Default for Assets {
     fn default() -> Self {
@@ -16,6 +17,7 @@ impl Default for Assets {
                 16.0,
             ),
             player: AnimationsGroup::from_file(include_bytes!("../assets/player.ase")),
+            enemies: AnimationsGroup::from_file(include_bytes!("../assets/enemies.ase")),
         }
     }
 }
