@@ -11,6 +11,7 @@ pub struct Player {
     pub velocity: Vec2,
     pub animation_time: f32,
     pub walking: bool,
+    pub moving_left: bool,
 }
 impl Player {
     pub fn new() -> Self {
@@ -20,6 +21,7 @@ impl Player {
             velocity: Vec2::ZERO,
             animation_time: 0.0,
             walking: false,
+            moving_left: false,
         }
     }
     pub fn update(&mut self, delta_time: f32, world: &World) {
@@ -28,6 +30,11 @@ impl Player {
         let axis = get_input_axis();
         if axis.length() > 0.0 {
             self.walking = true;
+            if axis.x < 0.0 {
+                self.moving_left = true;
+            } else if axis.x > 0.0 {
+                self.moving_left = false;
+            }
             self.velocity += axis.normalize() * delta_time * 3600.0;
         }
 
@@ -41,12 +48,16 @@ impl Player {
         self.camera_pos = self.pos
     }
     pub fn draw(&self, assets: &Assets) {
-        draw_texture(
+        draw_texture_ex(
             assets.player.animations[if self.walking { 1 } else { 0 }]
                 .get_at_time((self.animation_time * 1000.0) as u32),
             self.pos.x.floor(),
             self.pos.y.floor(),
             WHITE,
+            DrawTextureParams {
+                flip_x: self.moving_left,
+                ..Default::default()
+            },
         );
     }
 }

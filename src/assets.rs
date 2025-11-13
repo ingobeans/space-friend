@@ -31,7 +31,6 @@ impl AnimationsGroup {
     pub fn from_file(bytes: &[u8]) -> Self {
         let ase = AsepriteFile::read(bytes).unwrap();
         let mut frames = Vec::new();
-        let mut total_length = 0;
         for index in 0..ase.num_frames() {
             let frame = ase.frame(index);
             let img = frame.image();
@@ -41,7 +40,6 @@ impl AnimationsGroup {
                 bytes: img.as_bytes().to_vec(),
             };
             let duration = frame.duration();
-            total_length += duration;
             let texture = Texture2D::from_image(&new);
             frames.push((texture, duration));
         }
