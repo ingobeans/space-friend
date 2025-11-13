@@ -13,6 +13,7 @@ struct Game<'a> {
     pixel_camera: Camera2D,
     world_camera_bg: Camera2D,
     world_camera_fg: Camera2D,
+    stars: StarsBackground,
 }
 impl<'a> Game<'a> {
     fn new(assets: &'a Assets) -> Self {
@@ -60,6 +61,7 @@ impl<'a> Game<'a> {
             pixel_camera,
             world_camera_bg,
             world_camera_fg,
+            stars: StarsBackground::new(),
         }
     }
     fn update(&mut self) {
@@ -73,6 +75,7 @@ impl<'a> Game<'a> {
         self.pixel_camera.target = self.player.camera_pos.floor();
         set_camera(&self.pixel_camera);
         clear_background(BLACK);
+        self.stars.draw(delta_time, self.player.camera_pos);
 
         // draw world texture
         draw_texture_ex(

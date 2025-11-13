@@ -2,6 +2,8 @@ use asefile::{self, AsepriteFile};
 use image::EncodableLayout;
 use macroquad::prelude::*;
 
+use crate::utils::*;
+
 pub struct Assets {
     pub tileset: Spritesheet,
 }
@@ -12,6 +14,46 @@ impl Default for Assets {
                 load_ase_texture(include_bytes!("../assets/tileset.ase"), None),
                 16.0,
             ),
+        }
+    }
+}
+
+pub struct StarsBackground {
+    stars: Vec<(Vec2, f32)>,
+}
+const MAX_STAR_SPEED: f32 = 10.0;
+const MIN_STAR_SPEED: f32 = 5.0;
+impl StarsBackground {
+    pub fn new() -> Self {
+        let star_density = 0.005;
+        let stars_count = (SCREEN_WIDTH * SCREEN_HEIGHT * star_density) as usize;
+        let mut stars: Vec<(Vec2, f32)> = Vec::with_capacity(stars_count);
+        for _ in 0..stars_count {
+            let pos = Vec2::new(
+                rand::gen_range(0, SCREEN_WIDTH as usize) as f32,
+                rand::gen_range(0, SCREEN_HEIGHT as usize) as f32,
+            );
+            stars.push((pos, rand::gen_range(MIN_STAR_SPEED, MAX_STAR_SPEED)));
+        }
+        Self { stars }
+    }
+    pub fn draw(&mut self, delta_time: f32, offset: Vec2) {
+        for (pos, star_speed) in self.stars.iter_mut() {
+            pos.y += delta_time * *star_speed;
+            if pos.y > SCREEN_HEIGHT {
+                *pos = Vec2::new(rand::gen_range(0, SCREEN_WIDTH as usize) as f32, 0.0);
+            }
+            let value = 255
+                - ((MAX_STAR_SPEED - *star_speed) / (MAX_STAR_SPEED - MIN_STAR_SPEED) * 250.0)
+                    as u8;
+            let color = Color::from_rgba(value, value, value, 255);
+            draw_rectangle(
+                pos.x.floor() + offset.x.floor() - SCREEN_WIDTH / 2.0,
+                pos.y.floor() + offset.y.floor() - SCREEN_HEIGHT / 2.0,
+                1.0,
+                1.0,
+                color,
+            );
         }
     }
 }
