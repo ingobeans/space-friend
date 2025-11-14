@@ -5,6 +5,7 @@ use crate::{assets::*, enemy::*, player::*, utils::*};
 mod assets;
 mod enemy;
 mod player;
+mod ui;
 mod utils;
 
 struct Game<'a> {
@@ -16,6 +17,7 @@ struct Game<'a> {
     world_camera_fg: Camera2D,
     stars: StarsBackground,
     enemies: Vec<Enemy>,
+    locker_pos: Vec2,
 }
 impl<'a> Game<'a> {
     fn new(assets: &'a Assets) -> Self {
@@ -59,6 +61,7 @@ impl<'a> Game<'a> {
         player.pos = world.get_interactable_spawn(16).unwrap();
 
         Self {
+            locker_pos: world.get_interactable_spawn(41).unwrap(),
             player,
             assets,
             world,
@@ -75,6 +78,9 @@ impl<'a> Game<'a> {
         let (actual_screen_width, actual_screen_height) = screen_size();
         let scale_factor =
             (actual_screen_width / SCREEN_WIDTH).min(actual_screen_height / SCREEN_HEIGHT);
+        let (mouse_x, mouse_y) = mouse_position();
+        let mouse_x = mouse_x / scale_factor;
+        let mouse_y = mouse_y / scale_factor;
 
         self.player
             .update(delta_time, &mut self.world, &mut self.enemies);
@@ -91,6 +97,26 @@ impl<'a> Game<'a> {
             WHITE,
             DrawTextureParams::default(),
         );
+        let mut can_take_weapon = false;
+        if (self.player.pos + vec2(-8.0, 8.0)).distance_squared(self.locker_pos) < 512.0 {
+            draw_texture_ex(
+                &self.assets.open_locker,
+                self.locker_pos.x,
+                self.locker_pos.y - self.assets.open_locker.height() + 16.0,
+                WHITE,
+                DrawTextureParams::default(),
+            );
+            if self.player.weapon.is_none() {
+                can_take_weapon = true;
+                draw_texture_ex(
+                    &self.assets.weapons.get_at_time(0),
+                    self.locker_pos.x + 8.0 + 1.0,
+                    self.locker_pos.y - 10.0,
+                    WHITE,
+                    DrawTextureParams::default(),
+                );
+            }
+        }
         for ((x, y), entity) in self.world.tile_entities.iter_mut() {
             let pos = vec2(*x as f32, *y as f32) * 16.0;
             (entity.draw)(entity, self.assets, pos);
@@ -99,7 +125,7 @@ impl<'a> Game<'a> {
             enemy.update(delta_time, &mut self.player, &self.world);
             enemy.draw(self.assets);
         }
-        self.player.draw(self.assets);
+        self.player.draw(self.assets, mouse_x, mouse_y);
         draw_texture_ex(
             &self.world_camera_fg.render_target.as_ref().unwrap().texture,
             (self.world.x_min * 16) as f32,
@@ -122,6 +148,12 @@ impl<'a> Game<'a> {
                 ..Default::default()
             },
         );
+        if can_take_weapon {
+            ui::draw_tooltip(self.assets);
+            if is_key_pressed(KeyCode::E) {
+                self.player.weapon = Some(Weapon { sprite_index: 0 })
+            }
+        }
     }
 }
 #[macroquad::main("space friend")]

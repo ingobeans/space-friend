@@ -1,7 +1,6 @@
-use std::borrow::Borrow;
+use std::{borrow::Borrow, collections::HashMap};
 
 use macroquad::prelude::*;
-use pathfinding::matrix::directions::N;
 
 use crate::{
     assets::{Assets, Chunk, World},
@@ -38,9 +37,8 @@ fn get_connected_spawners(chunks: &[Chunk], start: (i16, i16)) -> Vec<((i16, i16
             let tile = get_tile(chunks, pos.0, pos.1) - 1;
             if tile > -1 {
                 checked.push(pos);
-                if tile == 32 {
-                    recurse(chunks, pos, checked, result);
-                } else {
+                recurse(chunks, pos, checked, result);
+                if tile != 32 {
                     result.push(((pos.0, pos.1), tile));
                 }
             }
@@ -51,7 +49,12 @@ fn get_connected_spawners(chunks: &[Chunk], start: (i16, i16)) -> Vec<((i16, i16
     result
 }
 
+pub struct Weapon {
+    pub sprite_index: u32,
+}
+
 pub struct Player {
+    pub weapon: Option<Weapon>,
     pub pos: Vec2,
     pub camera_pos: Vec2,
     pub velocity: Vec2,
@@ -65,6 +68,7 @@ pub struct Player {
 impl Player {
     pub fn new() -> Self {
         Self {
+            weapon: None,
             pos: Vec2::ZERO,
             camera_pos: Vec2::ZERO,
             velocity: Vec2::ZERO,
@@ -100,7 +104,8 @@ impl Player {
         let (tx, ty) = vec2_to_tile(self.pos);
         let (cx, cy) = tile_to_chunk((tx, ty));
         let mut new_spawned = Vec::new();
-        let mut tile_entities_death_queue = Vec::new();
+        let mut tile_entities = HashMap::new();
+        std::mem::swap(&mut tile_entities, &mut world.tile_entities);
         if let Some(chunk) = world.interactable.iter().find(|f| f.x == cx && f.y == cy)
             && let Some(tile) = chunk.tile_at((tx - cx) as _, (ty - cy) as _).map(|f| f - 1)
             && tile > -1
@@ -117,9 +122,9 @@ impl Player {
                             let enemy = Enemy::new(&GREENO, vec2(x as f32 * 16.0, y as f32 * 16.0));
                             enemies.push(enemy);
                         }
-                        80 => {
-                            if enemies.is_empty() {
-                                tile_entities_death_queue.push((x, y));
+                        64 => {
+                            if enemies.is_empty() && self.weapon.is_some() {
+                                tile_entities.retain(|p, _| p != &(x, y));
                             }
                         }
                         _ => panic!(),
@@ -127,13 +132,11 @@ impl Player {
                 }
             }
         }
-        world
-            .tile_entities
-            .retain(|(pos), _| !tile_entities_death_queue.contains(pos));
+        std::mem::swap(&mut tile_entities, &mut world.tile_entities);
         self.spawned_spawners.append(&mut new_spawned);
         self.camera_pos = self.pos
     }
-    pub fn draw(&self, assets: &Assets) {
+    pub fn draw(&self, assets: &Assets, mouse_x: f32, mouse_y: f32) {
         draw_texture_ex(
             assets.player.animations[if self.walking { 1 } else { 0 }]
                 .get_at_time((self.animation_time * 1000.0) as u32),
@@ -141,10 +144,26 @@ impl Player {
             self.pos.y.floor(),
             WHITE,
             DrawTextureParams {
-                flip_x: self.moving_left,
+                flip_x: mouse_x < SCREEN_WIDTH / 2.0,
                 ..Default::default()
             },
         );
+        if let Some(weapon) = &self.weapon {
+            draw_texture_ex(
+                &assets.weapons.get_at_time(weapon.sprite_index),
+                self.pos.x.floor() + 7.0,
+                self.pos.y.floor(),
+                WHITE,
+                DrawTextureParams {
+                    rotation: (vec2(mouse_x, mouse_y)
+                        - vec2(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0))
+                    .to_angle(),
+                    flip_y: mouse_x < SCREEN_WIDTH / 2.0,
+                    pivot: Some(self.pos.floor() + 8.0),
+                    ..Default::default()
+                },
+            );
+        }
     }
 }
 fn ceil_g(a: f32) -> f32 {
@@ -196,7 +215,7 @@ pub fn update_physicsbody(pos: Vec2, velocity: &mut Vec2, delta_time: f32, world
             || world
                 .tile_entities
                 .get(&(tx as i16, ty as i16))
-                .is_some_and(|f| f.collision)
+                .is_some_and(|f| f.collision && f.enabled)
         {
             let c = if velocity.y < 0.0 {
                 tile_y.floor() * 16.0
@@ -233,7 +252,7 @@ pub fn update_physicsbody(pos: Vec2, velocity: &mut Vec2, delta_time: f32, world
             || world
                 .tile_entities
                 .get(&(tx as i16, ty as i16))
-                .is_some_and(|f| f.collision)
+                .is_some_and(|f| f.collision && f.enabled)
         {
             let c = if velocity.x < 0.0 {
                 tile_x.floor() * 16.0

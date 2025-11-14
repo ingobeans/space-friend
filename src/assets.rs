@@ -10,6 +10,9 @@ pub struct Assets {
     pub tileset: Spritesheet,
     pub player: AnimationsGroup,
     pub enemies: AnimationsGroup,
+    pub weapons: Animation,
+    pub open_locker: Texture2D,
+    pub tooltip: Texture2D,
 }
 impl Default for Assets {
     fn default() -> Self {
@@ -20,6 +23,9 @@ impl Default for Assets {
             ),
             player: AnimationsGroup::from_file(include_bytes!("../assets/player.ase")),
             enemies: AnimationsGroup::from_file(include_bytes!("../assets/enemies.ase")),
+            weapons: Animation::from_file(include_bytes!("../assets/weapons.ase")),
+            open_locker: load_ase_texture(include_bytes!("../assets/open_locker.ase"), None),
+            tooltip: load_ase_texture(include_bytes!("../assets/tooltip.ase"), None),
         }
     }
 }
@@ -46,6 +52,7 @@ impl AnimationsGroup {
             };
             let duration = frame.duration();
             let texture = Texture2D::from_image(&new);
+            texture.set_filter(FilterMode::Nearest);
             frames.push((texture, duration));
         }
         let mut tag_frames = Vec::new();
@@ -78,7 +85,6 @@ pub struct Animation {
     pub total_length: u32,
 }
 impl Animation {
-    #[expect(dead_code)]
     pub fn from_file(bytes: &[u8]) -> Self {
         let ase = AsepriteFile::read(bytes).unwrap();
         let mut frames = Vec::new();
@@ -94,6 +100,7 @@ impl Animation {
             let duration = frame.duration();
             total_length += duration;
             let texture = Texture2D::from_image(&new);
+            texture.set_filter(FilterMode::Nearest);
             frames.push((texture, duration));
         }
         Self {
@@ -157,11 +164,13 @@ type TileEntityDraw = &'static dyn Fn(&mut TileEntity, &Assets, Vec2) -> TileEnt
 #[derive(Clone, Copy)]
 pub struct TileEntity {
     pub collision: bool,
+    pub enabled: bool,
     pub draw: TileEntityDraw,
     pub tile_index: i16,
 }
 pub const BARRIER: TileEntity = TileEntity {
     collision: true,
+    enabled: true,
     tile_index: 0,
     draw: &|this, assets, pos| {
         assets.tileset.draw_tile(
@@ -322,7 +331,8 @@ impl Default for World {
             }
         }
 
-        for chunk in &world.interactable {
+        let tile_entities = get_all_chunks(get_layer(xml, "TileEntities"));
+        for chunk in &tile_entities {
             for (index, tile) in chunk.tiles.iter().enumerate() {
                 let tile = tile - 1;
                 if tile <= -1 {
@@ -330,7 +340,7 @@ impl Default for World {
                 }
                 let x = (index % 16) as i16 + chunk.x;
                 let y = (index / 16) as i16 + chunk.y;
-                if tile == 80 {
+                if tile == 81 {
                     world
                         .tile_entities
                         .insert((x, y), BARRIER.instantiate(tile));
