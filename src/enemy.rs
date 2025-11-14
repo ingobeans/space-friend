@@ -38,6 +38,17 @@ pub struct Enemy {
     pub time_til_pathfind: f32,
 }
 impl Enemy {
+    pub fn new(ty: &'static EnemyType, pos: Vec2) -> Self {
+        Self {
+            ty,
+            pos,
+            health: 20.0,
+            animation_time: 0.0,
+            moving_left: false,
+            path: None,
+            time_til_pathfind: 0.0,
+        }
+    }
     pub fn update(&mut self, delta_time: f32, player: &mut Player, world: &World) {
         let delta = player.pos - self.pos;
         if delta.length() > 0.0 {

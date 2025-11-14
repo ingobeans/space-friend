@@ -55,15 +55,7 @@ impl<'a> Game<'a> {
         let mut player = Player::new();
         player.pos = world.get_interactable_spawn(16).unwrap();
 
-        let test_enemy = Enemy {
-            ty: &GREENO,
-            pos: world.get_interactable_spawn(32).unwrap(),
-            health: 20.0,
-            animation_time: 0.0,
-            moving_left: false,
-            path: None,
-            time_til_pathfind: 0.0,
-        };
+        let test_enemy = Enemy::new(&GREENO, world.get_interactable_spawn(32).unwrap());
 
         Self {
             player,
