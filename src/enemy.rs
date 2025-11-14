@@ -55,10 +55,13 @@ impl Enemy {
         }
     }
     pub fn update(&mut self, delta_time: f32, player: &mut Player, world: &World) {
+        self.animation_time += delta_time;
+        if self.animation_time < HOLE_TIME {
+            return;
+        }
         let delta = player.pos - self.pos;
         let mut target = player.pos + 8.0;
         if delta.length() > 0.0 {
-            self.animation_time += delta_time;
             self.time_til_pathfind -= delta_time;
 
             if self.ty.pathfind && (self.path.is_none() || self.time_til_pathfind <= 0.0) {
@@ -84,7 +87,30 @@ impl Enemy {
                 update_physicsbody(self.pos, &mut self.velocity, delta_time, &world.collision);
         }
     }
-    pub fn draw(&self, assets: &Assets) {
+    pub fn draw(&mut self, assets: &Assets) {
+        if self.animation_time < HOLE_TIME {
+            let max_hole_diameter = 20.0;
+            let diameter = (self.animation_time / HOLE_EMERGE_TIME * max_hole_diameter)
+                .min(max_hole_diameter)
+                .floor();
+            draw_ellipse(
+                self.pos.x.floor(),
+                self.pos.y.floor() + 8.0,
+                diameter,
+                diameter / 2.0,
+                0.0,
+                BLACK,
+            );
+            if self.animation_time > HOLE_EMERGE_TIME {
+                let amt = (self.animation_time - HOLE_EMERGE_TIME) / (HOLE_TIME - HOLE_EMERGE_TIME);
+                let amt = (amt - 1.0).powi(5) + 1.0;
+                let mut pos = self.pos.floor() + vec2(0.0, 13.0 - amt * 13.0);
+                (self.pos, pos) = (pos, self.pos);
+                (self.ty.draw_fn)(assets, self);
+                self.pos = pos;
+            }
+            return;
+        }
         (self.ty.draw_fn)(assets, self);
         let width = 25.0;
         let height = 4.0;
@@ -100,3 +126,5 @@ impl Enemy {
     }
 }
 pub const HEALTHBAR_COLOR: Color = Color::from_hex(0x39741f);
+const HOLE_EMERGE_TIME: f32 = 0.7;
+const HOLE_TIME: f32 = 1.8;
