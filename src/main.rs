@@ -55,8 +55,6 @@ impl<'a> Game<'a> {
         let mut player = Player::new();
         player.pos = world.get_interactable_spawn(16).unwrap();
 
-        let test_enemy = Enemy::new(&GREENO, world.get_interactable_spawn(32).unwrap());
-
         Self {
             player,
             assets,
@@ -64,7 +62,7 @@ impl<'a> Game<'a> {
             pixel_camera,
             world_camera_bg,
             world_camera_fg,
-            enemies: vec![test_enemy],
+            enemies: Vec::with_capacity(10), // todo: adjust capcacity later on?
             stars: StarsBackground::new(),
         }
     }

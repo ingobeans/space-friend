@@ -56,7 +56,7 @@ impl Enemy {
     }
     pub fn update(&mut self, delta_time: f32, player: &mut Player, world: &World) {
         let delta = player.pos - self.pos;
-        let mut target = player.pos;
+        let mut target = player.pos + 8.0;
         if delta.length() > 0.0 {
             self.animation_time += delta_time;
             self.time_til_pathfind -= delta_time;
