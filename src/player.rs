@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 
 use macroquad::prelude::*;
+use pathfinding::matrix::directions::N;
 
 use crate::{
     assets::{Assets, Chunk, World},
@@ -74,7 +75,7 @@ impl Player {
             spawned_spawners: Vec::new(),
         }
     }
-    pub fn update(&mut self, delta_time: f32, world: &World, enemies: &mut Vec<Enemy>) {
+    pub fn update(&mut self, delta_time: f32, world: &mut World, enemies: &mut Vec<Enemy>) {
         self.animation_time += delta_time;
         self.walking = false;
         let axis = get_input_axis();
@@ -99,22 +100,36 @@ impl Player {
         let (tx, ty) = vec2_to_tile(self.pos);
         let (cx, cy) = tile_to_chunk((tx, ty));
         let mut new_spawned = Vec::new();
+        let mut tile_entities_death_queue = Vec::new();
         if let Some(chunk) = world.interactable.iter().find(|f| f.x == cx && f.y == cy)
             && let Some(tile) = chunk.tile_at((tx - cx) as _, (ty - cy) as _).map(|f| f - 1)
             && tile > -1
         {
             if tile == 32 {
                 let tiles = get_connected_spawners(&world.interactable, (tx, ty));
-                for ((x, y), _tile) in tiles
+                for ((x, y), tile) in tiles
                     .into_iter()
                     .filter(|(p, _)| !self.spawned_spawners.contains(p))
                 {
-                    new_spawned.push((x, y));
-                    let enemy = Enemy::new(&GREENO, vec2(x as f32 * 16.0, y as f32 * 16.0));
-                    enemies.push(enemy);
+                    match tile {
+                        48 => {
+                            new_spawned.push((x, y));
+                            let enemy = Enemy::new(&GREENO, vec2(x as f32 * 16.0, y as f32 * 16.0));
+                            enemies.push(enemy);
+                        }
+                        80 => {
+                            if enemies.is_empty() {
+                                tile_entities_death_queue.push((x, y));
+                            }
+                        }
+                        _ => panic!(),
+                    }
                 }
             }
         }
+        world
+            .tile_entities
+            .retain(|(pos), _| !tile_entities_death_queue.contains(pos));
         self.spawned_spawners.append(&mut new_spawned);
         self.camera_pos = self.pos
     }
@@ -181,7 +196,7 @@ pub fn update_physicsbody(pos: Vec2, velocity: &mut Vec2, delta_time: f32, world
             || world
                 .tile_entities
                 .get(&(tx as i16, ty as i16))
-                .is_some_and(|(f, _)| f.has_collision())
+                .is_some_and(|f| f.collision)
         {
             let c = if velocity.y < 0.0 {
                 tile_y.floor() * 16.0
@@ -218,7 +233,7 @@ pub fn update_physicsbody(pos: Vec2, velocity: &mut Vec2, delta_time: f32, world
             || world
                 .tile_entities
                 .get(&(tx as i16, ty as i16))
-                .is_some_and(|(f, _)| f.has_collision())
+                .is_some_and(|f| f.collision)
         {
             let c = if velocity.x < 0.0 {
                 tile_x.floor() * 16.0

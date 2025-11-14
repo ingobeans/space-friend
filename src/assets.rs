@@ -153,26 +153,32 @@ impl StarsBackground {
 pub enum TileEntityUpdateResult {
     None,
 }
-pub trait TileEntity {
-    fn draw(&self, assets: &Assets, pos: Vec2, tile_index: &i16) {
+type TileEntityDraw = &'static dyn Fn(&mut TileEntity, &Assets, Vec2) -> TileEntityUpdateResult;
+#[derive(Clone, Copy)]
+pub struct TileEntity {
+    pub collision: bool,
+    pub draw: TileEntityDraw,
+    pub tile_index: i16,
+}
+pub const BARRIER: TileEntity = TileEntity {
+    collision: true,
+    tile_index: 0,
+    draw: &|this, assets, pos| {
         assets.tileset.draw_tile(
             pos.x,
             pos.y,
-            (tile_index % 16) as f32,
-            (tile_index / 16) as f32,
+            (this.tile_index % 16) as f32,
+            (this.tile_index / 16) as f32,
             None,
         );
-    }
-    fn has_collision(&self) -> bool {
-        false
-    }
-}
-pub struct Barrier {
-    on: bool,
-}
-impl TileEntity for Barrier {
-    fn has_collision(&self) -> bool {
-        true
+        TileEntityUpdateResult::None
+    },
+};
+impl TileEntity {
+    fn instantiate(&self, tile_index: i16) -> Self {
+        let mut new = *self;
+        new.tile_index = tile_index;
+        new
     }
 }
 
@@ -183,7 +189,7 @@ pub struct World {
     pub background_details: Vec<Chunk>,
     pub interactable: Vec<Chunk>,
 
-    pub tile_entities: HashMap<(i16, i16), (Box<dyn TileEntity>, i16)>,
+    pub tile_entities: HashMap<(i16, i16), TileEntity>,
 
     pub x_min: i16,
     pub x_max: i16,
@@ -327,7 +333,7 @@ impl Default for World {
                 if tile == 80 {
                     world
                         .tile_entities
-                        .insert((x, y), (Box::new(Barrier { on: true }), tile));
+                        .insert((x, y), BARRIER.instantiate(tile));
                 }
             }
         }

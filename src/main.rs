@@ -77,7 +77,7 @@ impl<'a> Game<'a> {
             (actual_screen_width / SCREEN_WIDTH).min(actual_screen_height / SCREEN_HEIGHT);
 
         self.player
-            .update(delta_time, &self.world, &mut self.enemies);
+            .update(delta_time, &mut self.world, &mut self.enemies);
         self.pixel_camera.target = self.player.camera_pos.floor();
         set_camera(&self.pixel_camera);
         clear_background(BLACK);
@@ -91,8 +91,9 @@ impl<'a> Game<'a> {
             WHITE,
             DrawTextureParams::default(),
         );
-        for ((x, y), (entity, tile)) in self.world.tile_entities.iter() {
-            entity.draw(self.assets, vec2(*x as f32, *y as f32) * 16.0, tile)
+        for ((x, y), entity) in self.world.tile_entities.iter_mut() {
+            let pos = vec2(*x as f32, *y as f32) * 16.0;
+            (entity.draw)(entity, self.assets, pos);
         }
         for enemy in self.enemies.iter_mut() {
             enemy.update(delta_time, &mut self.player, &self.world);
