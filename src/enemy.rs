@@ -21,6 +21,14 @@ pub const GREENO: EnemyType = EnemyType {
     pathfind: false,
     melee_attack: Some(15.0),
 };
+pub const DOG: EnemyType = EnemyType {
+    animation_id: 2,
+    health: 9.0,
+    speed: 80.0,
+    pathfind: false,
+    melee_attack: Some(10.0),
+};
+pub static ENEMIES: &[EnemyType] = &[GREENO, DOG];
 
 pub struct Enemy {
     pub ty: &'static EnemyType,

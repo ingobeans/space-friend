@@ -4,7 +4,7 @@ use macroquad::prelude::*;
 
 use crate::{
     assets::{Assets, Chunk, World},
-    enemy::{Enemy, GREENO},
+    enemy::{ENEMIES, Enemy},
     utils::*,
 };
 
@@ -77,6 +77,9 @@ impl Projectile {
                 .iter_mut()
                 .find(|enemy| enemy.pos.distance_squared(self.pos) < 256.0)
             {
+                if enemy.emerging {
+                    return false;
+                }
                 enemy.health -= self.ty.damage;
                 return false;
             }
@@ -209,9 +212,12 @@ impl Player {
                     .filter(|(p, _)| !self.spawned_spawners.contains(p))
                 {
                     match tile {
-                        48 => {
+                        96..111 => {
                             new_spawned.push((x, y));
-                            let enemy = Enemy::new(&GREENO, vec2(x as f32 * 16.0, y as f32 * 16.0));
+                            let enemy = Enemy::new(
+                                &ENEMIES[tile as usize - 96],
+                                vec2(x as f32 * 16.0, y as f32 * 16.0),
+                            );
                             enemies.push(enemy);
                         }
                         64 => {
