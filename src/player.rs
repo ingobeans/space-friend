@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, collections::HashMap};
+use std::{borrow::Borrow, collections::HashMap, f32::consts::PI};
 
 use macroquad::prelude::*;
 
@@ -97,12 +97,16 @@ impl Projectile {
         {
             return false;
         }
-        draw_texture(
+        draw_texture_ex(
             assets.projectiles.animations[self.ty.animation_index]
                 .get_at_time((self.time * 1000.0) as u32),
             self.pos.x.floor() - 8.0,
             self.pos.y.floor() - 8.0,
             WHITE,
+            DrawTextureParams {
+                rotation: self.dir.to_angle(),
+                ..Default::default()
+            },
         );
         true
     }
@@ -113,7 +117,11 @@ pub static ENERGY_BALL: ProjectileType = ProjectileType {
     speed: 160.0,
     damage: 4.0,
 };
-
+pub static ENERGY_SHOT: ProjectileType = ProjectileType {
+    animation_index: 2,
+    speed: 200.0,
+    damage: 2.0,
+};
 pub static ALIEN_BALL: ProjectileType = ProjectileType {
     animation_index: 1,
     speed: 100.0,
@@ -123,16 +131,24 @@ pub static ALIEN_BALL: ProjectileType = ProjectileType {
 pub struct Weapon {
     pub projectile: &'static ProjectileType,
     pub attack_delay: f32,
+    pub multishot: Option<(u8, f32)>,
 }
 pub static GUN: Weapon = Weapon {
     projectile: &ENERGY_BALL,
     attack_delay: 1.0 / 3.0,
+    multishot: None,
 };
 pub static RIFLE: Weapon = Weapon {
-    projectile: &ENERGY_BALL,
-    attack_delay: 1.0 / 6.0,
+    projectile: &ENERGY_SHOT,
+    attack_delay: 1.0 / 7.0,
+    multishot: None,
 };
-pub static WEAPONS: &[&Weapon] = &[&GUN, &RIFLE];
+pub static SHOTGUN: Weapon = Weapon {
+    projectile: &ENERGY_BALL,
+    attack_delay: 0.6,
+    multishot: Some((3, PI / 5.0)),
+};
+pub static WEAPONS: &[&Weapon] = &[&GUN, &RIFLE, &SHOTGUN];
 
 pub struct Player {
     pub weapon: Option<&'static Weapon>,
@@ -187,15 +203,26 @@ impl Player {
             && is_mouse_button_down(MouseButton::Left)
         {
             self.attack_counter = weapon.attack_delay;
-            let new = Projectile {
-                ty: weapon.projectile,
-                time: 0.0,
-                pos: self.pos + 8.0,
-                dir: (vec2(mouse.0, mouse.1) - vec2(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0))
-                    .normalize(),
-                friendly: true,
-            };
-            projectiles.push(new);
+            let mut new = Vec::new();
+            let multishot = weapon.multishot.unwrap_or((1, 0.0));
+            let per_angle = multishot.1 / multishot.0 as f32;
+            for i in 0..multishot.0 {
+                let angle = (vec2(mouse.0, mouse.1)
+                    - vec2(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0))
+                .normalize()
+                .to_angle()
+                    + i as f32 * per_angle
+                    - per_angle * multishot.0 as f32 / 2.0;
+
+                new.push(Projectile {
+                    ty: weapon.projectile,
+                    time: 0.0,
+                    pos: self.pos + 8.0,
+                    dir: Vec2::from_angle(angle),
+                    friendly: true,
+                });
+            }
+            projectiles.append(&mut new);
         }
         let friction = if axis.length() == 0.0 { 20.0 } else { 10.0 } * delta_time;
         self.velocity = self
