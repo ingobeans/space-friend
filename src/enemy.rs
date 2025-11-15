@@ -26,6 +26,7 @@ pub enum EnemyMovement {
     Chase,
     None,
     Pathfind,
+    Straight,
 }
 pub struct EnemyState {
     pub animation_id: usize,
@@ -90,7 +91,36 @@ pub static ENEMIES: LazyLock<Vec<EnemyType>> = LazyLock::new(|| {
         }],
         health: 9.0,
     };
-    vec![greeno, dog, shooter]
+    let bigo: EnemyType = EnemyType {
+        states: vec![
+            EnemyState {
+                animation_id: 5,
+                speed: 0.0,
+                movement: EnemyMovement::Chase,
+                projectile_firing: ProjectileFiring::None,
+                change_state: StateChangeCondition::Always,
+                damage_on_exit: None,
+            },
+            EnemyState {
+                animation_id: 5,
+                speed: 160.0,
+                movement: EnemyMovement::Straight,
+                projectile_firing: ProjectileFiring::None,
+                change_state: StateChangeCondition::HitWall,
+                damage_on_exit: None,
+            },
+            EnemyState {
+                animation_id: 6,
+                speed: 0.0,
+                movement: EnemyMovement::Chase,
+                projectile_firing: ProjectileFiring::Around(&ALIEN_BALL, 10),
+                change_state: StateChangeCondition::AnimationFinish,
+                damage_on_exit: Some(30.0),
+            },
+        ],
+        health: 90.0,
+    };
+    vec![greeno, dog, shooter, bigo]
 });
 
 pub struct Enemy {
@@ -161,13 +191,16 @@ impl Enemy {
                 target = next;
             }
         }
+        if matches!(self.current_state().movement, EnemyMovement::Straight) {
+            target = self.pos + self.direction;
+        }
         let distance = target.distance_squared(self.pos);
         if distance > 0.0 && !matches!(self.current_state().movement, EnemyMovement::None) {
             self.direction = (target - self.pos).normalize();
             self.velocity = (target - self.pos).normalize() * self.current_state().speed;
             let v = self.velocity;
             self.pos = update_physicsbody(self.pos, &mut self.velocity, delta_time, world);
-            if v.length_squared() < self.velocity.length_squared() {
+            if self.velocity.length_squared() < v.length_squared() {
                 hit_wall = true;
             }
         }
@@ -184,9 +217,13 @@ impl Enemy {
                         as f32
             }
             StateChangeCondition::NearPlayer => player.pos.distance_squared(self.pos) < 144.0,
-            StateChangeCondition::HitWall => hit_wall,
+            StateChangeCondition::HitWall => {
+                hit_wall || player.pos.distance_squared(self.pos) < 144.0
+            }
         } {
-            if let Some(damage) = self.current_state().damage_on_exit {
+            if let Some(damage) = self.current_state().damage_on_exit
+                && player.pos.distance_squared(self.pos) < 144.0
+            {
                 player.health -= damage;
             }
             match &self.current_state().projectile_firing {
@@ -259,7 +296,7 @@ impl Enemy {
             self.pos.y.floor() - 16.0,
             WHITE,
             DrawTextureParams {
-                flip_x: self.direction.x < 0.0,
+                flip_x: self.direction.x > 0.0,
                 ..Default::default()
             },
         );

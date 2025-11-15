@@ -189,7 +189,7 @@ pub const BARRIER: TileEntity = TileEntity {
     },
 };
 impl TileEntity {
-    fn instantiate(&self, tile_index: i16) -> Self {
+    pub fn instantiate(&self, tile_index: i16) -> Self {
         let mut new = *self;
         new.tile_index = tile_index;
         new
@@ -360,7 +360,7 @@ impl Default for World {
                 }
                 let x = (index % 16) as i16 + chunk.x;
                 let y = (index / 16) as i16 + chunk.y;
-                if tile == 81 {
+                if (81..=83).contains(&tile) {
                     world
                         .tile_entities
                         .insert((x, y), BARRIER.instantiate(tile));

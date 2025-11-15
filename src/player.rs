@@ -3,7 +3,7 @@ use std::{borrow::Borrow, collections::HashMap, f32::consts::PI};
 use macroquad::prelude::*;
 
 use crate::{
-    assets::{Assets, Chunk, World},
+    assets::{Assets, BARRIER, Chunk, World},
     enemy::{ENEMIES, Enemy},
     utils::*,
 };
@@ -261,6 +261,9 @@ impl Player {
                         if enemies.is_empty() && self.weapon.is_some() {
                             tile_entities.retain(|p, _| p != &(x, y));
                         }
+                    }
+                    82 | 83 => {
+                        tile_entities.insert((x, y), BARRIER.instantiate(tile));
                     }
                     _ => panic!(),
                 }
