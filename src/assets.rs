@@ -4,15 +4,17 @@ use asefile::{self, AsepriteFile};
 use image::EncodableLayout;
 use macroquad::prelude::*;
 
-use crate::utils::*;
+use crate::{
+    player::{WEAPONS, Weapon},
+    utils::*,
+};
 
 pub struct Assets {
     pub tileset: Spritesheet,
     pub player: AnimationsGroup,
     pub enemies: AnimationsGroup,
     pub projectiles: AnimationsGroup,
-    pub weapons: Animation,
-    pub open_locker: Texture2D,
+    pub locker: Animation,
     pub tooltip: Texture2D,
     pub healthbar: Texture2D,
 }
@@ -26,8 +28,7 @@ impl Default for Assets {
             player: AnimationsGroup::from_file(include_bytes!("../assets/player.ase")),
             enemies: AnimationsGroup::from_file(include_bytes!("../assets/enemies.ase")),
             projectiles: AnimationsGroup::from_file(include_bytes!("../assets/projectiles.ase")),
-            weapons: Animation::from_file(include_bytes!("../assets/weapons.ase")),
-            open_locker: load_ase_texture(include_bytes!("../assets/open_locker.ase"), None),
+            locker: Animation::from_file(include_bytes!("../assets/locker.ase")),
             tooltip: load_ase_texture(include_bytes!("../assets/tooltip.ase"), None),
             healthbar: load_ase_texture(include_bytes!("../assets/healthbar.ase"), None),
         }
@@ -202,6 +203,7 @@ pub struct World {
     pub background_details: Vec<Chunk>,
     pub interactable: Vec<Chunk>,
 
+    pub lockers: Vec<(Vec2, Option<&'static Weapon>)>,
     pub tile_entities: HashMap<(i16, i16), TileEntity>,
 
     pub x_min: i16,
@@ -305,6 +307,7 @@ impl Default for World {
             background: get_all_chunks(background),
             interactable: get_all_chunks(interactable),
             background_details: get_all_chunks(background_details),
+            lockers: Vec::new(),
             tile_entities: HashMap::new(),
             x_min: 999,
             y_min: 999,
@@ -336,6 +339,19 @@ impl Default for World {
         }
 
         let tile_entities = get_all_chunks(get_layer(xml, "TileEntities"));
+        for chunk in &world.interactable {
+            for (index, tile) in chunk.tiles.iter().enumerate() {
+                let tile = tile - 1;
+                if tile >= 112 && tile <= 127 {
+                    let x = (index % 16) as i16 + chunk.x;
+                    let y = (index / 16) as i16 + chunk.y;
+                    world.lockers.push((
+                        vec2(x as f32 * 16.0, y as f32 * 16.0),
+                        Some(WEAPONS[tile as usize - 112]),
+                    ));
+                }
+            }
+        }
         for chunk in &tile_entities {
             for (index, tile) in chunk.tiles.iter().enumerate() {
                 let tile = tile - 1;

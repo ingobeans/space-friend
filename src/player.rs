@@ -49,6 +49,7 @@ fn get_connected_spawners(chunks: &[Chunk], start: (i16, i16)) -> Vec<((i16, i16
     result
 }
 
+#[derive(PartialEq)]
 pub struct ProjectileType {
     pub animation_index: usize,
     pub speed: f32,
@@ -118,16 +119,20 @@ pub static ALIEN_BALL: ProjectileType = ProjectileType {
     speed: 100.0,
     damage: 4.0,
 };
+#[derive(PartialEq)]
 pub struct Weapon {
-    pub sprite_index: u32,
     pub projectile: &'static ProjectileType,
     pub attack_delay: f32,
 }
 pub static GUN: Weapon = Weapon {
-    sprite_index: 0,
     projectile: &ENERGY_BALL,
     attack_delay: 1.0 / 3.0,
 };
+pub static RIFLE: Weapon = Weapon {
+    projectile: &ENERGY_BALL,
+    attack_delay: 1.0 / 6.0,
+};
+pub static WEAPONS: &[&Weapon] = &[&GUN, &RIFLE];
 
 pub struct Player {
     pub weapon: Option<&'static Weapon>,
@@ -252,19 +257,19 @@ impl Player {
             },
         );
         if let Some(weapon) = &self.weapon {
-            draw_texture_ex(
-                assets.weapons.get_at_time(weapon.sprite_index),
+            assets.tileset.draw_tile(
                 self.pos.x.floor() + 7.0,
                 self.pos.y.floor(),
-                WHITE,
-                DrawTextureParams {
+                WEAPONS.iter().position(|f| f == weapon).unwrap() as f32,
+                7.0,
+                Some(&DrawTextureParams {
                     rotation: (vec2(mouse.0, mouse.1)
                         - vec2(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT / 2.0))
                     .to_angle(),
                     flip_y: mouse.0 < SCREEN_WIDTH / 2.0,
                     pivot: Some(self.pos.floor() + 8.0),
                     ..Default::default()
-                },
+                }),
             );
         }
     }

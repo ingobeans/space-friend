@@ -17,7 +17,6 @@ struct Game<'a> {
     world_camera_fg: Camera2D,
     stars: StarsBackground,
     enemies: Vec<Enemy>,
-    locker_pos: Vec2,
     projectiles: Vec<Projectile>,
 }
 impl<'a> Game<'a> {
@@ -62,7 +61,6 @@ impl<'a> Game<'a> {
         player.pos = world.get_interactable_spawn(16).unwrap();
 
         Self {
-            locker_pos: world.get_interactable_spawn(41).unwrap(),
             player,
             assets,
             world,
@@ -105,25 +103,40 @@ impl<'a> Game<'a> {
             DrawTextureParams::default(),
         );
         let mut can_take_weapon = false;
-        if (self.player.pos + vec2(-8.0, 8.0)).distance_squared(self.locker_pos) < 512.0 {
-            draw_texture_ex(
-                &self.assets.open_locker,
-                self.locker_pos.x,
-                self.locker_pos.y - self.assets.open_locker.height() + 16.0,
-                WHITE,
-                DrawTextureParams::default(),
-            );
-            if self.player.weapon.is_none() {
-                can_take_weapon = true;
+
+        for (locker_pos, slot) in self.world.lockers.iter_mut() {
+            if (self.player.pos + vec2(-8.0, 8.0)).distance_squared(*locker_pos) < 512.0 {
                 draw_texture_ex(
-                    self.assets.weapons.get_at_time(0),
-                    self.locker_pos.x + 8.0 + 1.0,
-                    self.locker_pos.y - 10.0,
+                    &self.assets.locker.get_at_time(1),
+                    locker_pos.x,
+                    locker_pos.y - 48.0 + 16.0,
+                    WHITE,
+                    DrawTextureParams::default(),
+                );
+                if let Some(weapon) = slot {
+                    can_take_weapon = true;
+                    self.assets.tileset.draw_tile(
+                        locker_pos.x + 8.0,
+                        locker_pos.y - 8.0,
+                        WEAPONS.iter().position(|f| f == weapon).unwrap() as f32,
+                        7.0,
+                        None,
+                    );
+                    if is_key_pressed(KeyCode::E) {
+                        std::mem::swap(&mut self.player.weapon, slot);
+                    }
+                }
+            } else {
+                draw_texture_ex(
+                    &self.assets.locker.get_at_time(0),
+                    locker_pos.x,
+                    locker_pos.y - 48.0 + 16.0,
                     WHITE,
                     DrawTextureParams::default(),
                 );
             }
         }
+
         for ((x, y), entity) in self.world.tile_entities.iter_mut() {
             let pos = vec2(*x as f32, *y as f32) * 16.0;
             (entity.draw)(entity, self.assets, pos);
@@ -174,9 +187,6 @@ impl<'a> Game<'a> {
             },
         );
         ui::draw_ui(self.assets, can_take_weapon, &self.player);
-        if can_take_weapon && is_key_pressed(KeyCode::E) {
-            self.player.weapon = Some(&GUN)
-        }
     }
 }
 #[macroquad::main("space splatter")]
