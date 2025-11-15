@@ -14,6 +14,7 @@ pub struct Assets {
     pub weapons: Animation,
     pub open_locker: Texture2D,
     pub tooltip: Texture2D,
+    pub healthbar: Texture2D,
 }
 impl Default for Assets {
     fn default() -> Self {
@@ -28,6 +29,7 @@ impl Default for Assets {
             weapons: Animation::from_file(include_bytes!("../assets/weapons.ase")),
             open_locker: load_ase_texture(include_bytes!("../assets/open_locker.ase"), None),
             tooltip: load_ase_texture(include_bytes!("../assets/tooltip.ase"), None),
+            healthbar: load_ase_texture(include_bytes!("../assets/healthbar.ase"), None),
         }
     }
 }

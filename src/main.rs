@@ -167,8 +167,8 @@ impl<'a> Game<'a> {
                 ..Default::default()
             },
         );
+        ui::draw_ui(self.assets, can_take_weapon, &self.player);
         if can_take_weapon {
-            ui::draw_tooltip(self.assets);
             if is_key_pressed(KeyCode::E) {
                 self.player.weapon = Some(&GUN)
             }
