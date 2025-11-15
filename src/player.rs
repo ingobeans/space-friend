@@ -129,7 +129,6 @@ pub struct Player {
     pub animation_time: f32,
     pub walking: bool,
     pub moving_left: bool,
-    #[expect(dead_code)]
     pub health: f32,
     pub spawned_spawners: Vec<(i16, i16)>,
     pub attack_counter: f32,

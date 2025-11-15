@@ -129,13 +129,13 @@ impl<'a> Game<'a> {
             (entity.draw)(entity, self.assets, pos);
         }
 
+        self.player.draw(self.assets, (mouse_x, mouse_y));
         self.enemies.retain_mut(|enemy| {
             enemy.update(delta_time, &mut self.player, &self.world);
             enemy.draw(self.assets);
             enemy.health > 0.0
         });
 
-        self.player.draw(self.assets, (mouse_x, mouse_y));
         self.projectiles.retain_mut(|projectile| {
             projectile.update(
                 self.assets,

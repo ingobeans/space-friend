@@ -7,28 +7,19 @@ use crate::{
 use macroquad::prelude::*;
 
 pub struct EnemyType {
-    pub draw_fn: &'static dyn Fn(&Assets, &Enemy),
+    pub animation_id: usize,
+    pub melee_attack: Option<f32>,
     pub speed: f32,
     pub health: f32,
     pub pathfind: bool,
 }
 
 pub const GREENO: EnemyType = EnemyType {
-    draw_fn: &|assets, enemy| {
-        draw_texture_ex(
-            assets.enemies.animations[0].get_at_time((enemy.animation_time * 1000.0) as u32),
-            enemy.pos.x.floor() - 16.0,
-            enemy.pos.y.floor() - 16.0,
-            WHITE,
-            DrawTextureParams {
-                flip_x: enemy.moving_left,
-                ..Default::default()
-            },
-        );
-    },
+    animation_id: 0,
     health: 20.0,
     speed: 25.0,
     pathfind: false,
+    melee_attack: Some(15.0),
 };
 
 pub struct Enemy {
@@ -40,6 +31,8 @@ pub struct Enemy {
     pub path: Option<VecDeque<(i16, i16)>>,
     pub time_til_pathfind: f32,
     pub velocity: Vec2,
+    pub attacking: bool,
+    pub emerging: bool,
 }
 impl Enemy {
     pub fn new(ty: &'static EnemyType, pos: Vec2) -> Self {
@@ -51,12 +44,19 @@ impl Enemy {
             moving_left: false,
             path: None,
             time_til_pathfind: 0.0,
+            attacking: false,
+            emerging: true,
             velocity: Vec2::ZERO,
         }
     }
     pub fn update(&mut self, delta_time: f32, player: &mut Player, world: &World) {
         self.animation_time += delta_time;
-        if self.animation_time < HOLE_TIME {
+        if self.emerging && self.animation_time < HOLE_TIME {
+            return;
+        } else if self.emerging {
+            self.emerging = false;
+        }
+        if self.attacking {
             return;
         }
         let delta = player.pos - self.pos;
@@ -80,14 +80,21 @@ impl Enemy {
                 target = next;
             }
         }
-        if target.distance(self.pos) > 0.0 {
+        let distance = target.distance_squared(self.pos);
+        if distance < 144.0
+            && let Some(damage) = self.ty.melee_attack
+        {
+            self.animation_time = 0.0;
+            self.attacking = true;
+            player.health -= damage;
+        } else if distance > 0.0 {
             self.moving_left = (target - self.pos).x > 0.0;
             self.velocity = (target - self.pos).normalize() * self.ty.speed;
             self.pos = update_physicsbody(self.pos, &mut self.velocity, delta_time, &world);
         }
     }
     pub fn draw(&mut self, assets: &Assets) {
-        if self.animation_time < HOLE_TIME {
+        if self.emerging && self.animation_time < HOLE_TIME {
             let max_hole_diameter = 20.0;
             let diameter = (self.animation_time / HOLE_EMERGE_TIME * max_hole_diameter)
                 .min(max_hole_diameter)
@@ -103,14 +110,44 @@ impl Enemy {
             if self.animation_time > HOLE_EMERGE_TIME {
                 let amt = (self.animation_time - HOLE_EMERGE_TIME) / (HOLE_TIME - HOLE_EMERGE_TIME);
                 let amt = (amt - 1.0).powi(5) + 1.0;
-                let mut pos = self.pos.floor() + vec2(0.0, 13.0 - amt * 13.0);
-                (self.pos, pos) = (pos, self.pos);
-                (self.ty.draw_fn)(assets, self);
-                self.pos = pos;
+                let pos = self.pos.floor() + vec2(0.0, 13.0 - amt * 13.0);
+                draw_texture_ex(
+                    assets.enemies.animations[self.ty.animation_id]
+                        .get_at_time((self.animation_time * 1000.0) as u32),
+                    pos.x.floor() - 16.0,
+                    pos.y.floor() - 16.0,
+                    WHITE,
+                    DrawTextureParams {
+                        flip_x: self.moving_left,
+                        ..Default::default()
+                    },
+                );
             }
             return;
         }
-        (self.ty.draw_fn)(assets, self);
+        if self.attacking {
+            if self.animation_time * 1000.0
+                >= assets.enemies.animations[self.ty.animation_id + 1].total_length as f32
+            {
+                self.attacking = false;
+            }
+        }
+        let animation_id = if self.attacking {
+            self.ty.animation_id + 1
+        } else {
+            self.ty.animation_id
+        };
+        draw_texture_ex(
+            assets.enemies.animations[animation_id]
+                .get_at_time((self.animation_time * 1000.0) as u32),
+            self.pos.x.floor() - 16.0,
+            self.pos.y.floor() - 16.0,
+            WHITE,
+            DrawTextureParams {
+                flip_x: self.moving_left,
+                ..Default::default()
+            },
+        );
         let width = 25.0;
         let height = 4.0;
         let pos = self.pos.floor() - 16.0 + vec2(0.0, -4.0) + (32.0 - width) / 2.0;
