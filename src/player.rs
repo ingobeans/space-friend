@@ -50,7 +50,7 @@ fn get_connected_spawners(chunks: &[Chunk], start: (i16, i16)) -> Vec<((i16, i16
 }
 
 pub struct ProjectileType {
-    pub animation_index: i16,
+    pub animation_index: usize,
     pub speed: f32,
     pub damage: f32,
 }
@@ -96,7 +96,8 @@ impl Projectile {
             return false;
         }
         draw_texture(
-            assets.projectiles.animations[0].get_at_time((self.time * 1000.0) as u32),
+            assets.projectiles.animations[self.ty.animation_index]
+                .get_at_time((self.time * 1000.0) as u32),
             self.pos.x.floor() - 8.0,
             self.pos.y.floor() - 8.0,
             WHITE,

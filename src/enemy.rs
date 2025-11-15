@@ -33,6 +33,7 @@ pub struct Enemy {
     pub velocity: Vec2,
     pub attacking: bool,
     pub emerging: bool,
+    pub just_finished_attack: bool,
 }
 impl Enemy {
     pub fn new(ty: &'static EnemyType, pos: Vec2) -> Self {
@@ -46,6 +47,7 @@ impl Enemy {
             time_til_pathfind: 0.0,
             attacking: false,
             emerging: true,
+            just_finished_attack: false,
             velocity: Vec2::ZERO,
         }
     }
@@ -81,12 +83,17 @@ impl Enemy {
             }
         }
         let distance = target.distance_squared(self.pos);
-        if distance < 144.0
-            && let Some(damage) = self.ty.melee_attack
-        {
+
+        if self.just_finished_attack {
+            self.just_finished_attack = false;
+            if distance < 250.0
+                && let Some(damage) = self.ty.melee_attack
+            {
+                player.health -= damage;
+            }
+        } else if distance < 144.0 && self.ty.melee_attack.is_some() {
             self.animation_time = 0.0;
             self.attacking = true;
-            player.health -= damage;
         } else if distance > 0.0 {
             self.moving_left = (target - self.pos).x > 0.0;
             self.velocity = (target - self.pos).normalize() * self.ty.speed;
@@ -130,6 +137,7 @@ impl Enemy {
                 >= assets.enemies.animations[self.ty.animation_id + 1].total_length as f32
             {
                 self.attacking = false;
+                self.just_finished_attack = true;
             }
         }
         let animation_id = if self.attacking {
