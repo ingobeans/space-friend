@@ -112,6 +112,12 @@ pub static ENERGY_BALL: ProjectileType = ProjectileType {
     speed: 160.0,
     damage: 4.0,
 };
+
+pub static ALIEN_BALL: ProjectileType = ProjectileType {
+    animation_index: 1,
+    speed: 100.0,
+    damage: 4.0,
+};
 pub struct Weapon {
     pub sprite_index: u32,
     pub projectile: &'static ProjectileType,

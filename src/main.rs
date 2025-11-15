@@ -131,7 +131,13 @@ impl<'a> Game<'a> {
 
         self.player.draw(self.assets, (mouse_x, mouse_y));
         self.enemies.retain_mut(|enemy| {
-            enemy.update(delta_time, &mut self.player, &self.world);
+            enemy.update(
+                delta_time,
+                &mut self.player,
+                &self.world,
+                self.assets,
+                &mut self.projectiles,
+            );
             enemy.draw(self.assets);
             enemy.health > 0.0
         });
@@ -168,10 +174,9 @@ impl<'a> Game<'a> {
             },
         );
         ui::draw_ui(self.assets, can_take_weapon, &self.player);
-        if can_take_weapon
-            && is_key_pressed(KeyCode::E) {
-                self.player.weapon = Some(&GUN)
-            }
+        if can_take_weapon && is_key_pressed(KeyCode::E) {
+            self.player.weapon = Some(&GUN)
+        }
     }
 }
 #[macroquad::main("space splatter")]
