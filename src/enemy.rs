@@ -105,7 +105,7 @@ impl Enemy {
         } else if distance > 0.0 {
             self.moving_left = (target - self.pos).x > 0.0;
             self.velocity = (target - self.pos).normalize() * self.ty.speed;
-            self.pos = update_physicsbody(self.pos, &mut self.velocity, delta_time, &world);
+            self.pos = update_physicsbody(self.pos, &mut self.velocity, delta_time, world);
         }
     }
     pub fn draw(&mut self, assets: &Assets) {
@@ -140,14 +140,13 @@ impl Enemy {
             }
             return;
         }
-        if self.attacking {
-            if self.animation_time * 1000.0
+        if self.attacking
+            && self.animation_time * 1000.0
                 >= assets.enemies.animations[self.ty.animation_id + 1].total_length as f32
             {
                 self.attacking = false;
                 self.just_finished_attack = true;
             }
-        }
         let animation_id = if self.attacking {
             self.ty.animation_id + 1
         } else {

@@ -15,8 +15,8 @@ fn tile_to_chunk(pos: (i16, i16)) -> (i16, i16) {
 }
 
 fn vec2_to_tile(pos: Vec2) -> (i16, i16) {
-    let cx = (pos.x as f32 / 16.0).floor() as i16;
-    let cy = (pos.y as f32 / 16.0).floor() as i16;
+    let cx = (pos.x / 16.0).floor() as i16;
+    let cy = (pos.y / 16.0).floor() as i16;
     (cx, cy)
 }
 
@@ -65,7 +65,7 @@ impl Projectile {
     pub fn update(
         &mut self,
         assets: &Assets,
-        enemies: &mut Vec<Enemy>,
+        enemies: &mut [Enemy],
         player: &mut Player,
         world: &World,
         delta_time: f32,
@@ -83,11 +83,9 @@ impl Projectile {
                 enemy.health -= self.ty.damage;
                 return false;
             }
-        } else {
-            if player.pos.distance_squared(self.pos) < 256.0 {
-                player.health -= self.ty.damage;
-                return false;
-            }
+        } else if player.pos.distance_squared(self.pos) < 256.0 {
+            player.health -= self.ty.damage;
+            return false;
         }
 
         let (tx, ty) = vec2_to_tile(self.pos);
@@ -193,7 +191,7 @@ impl Player {
             .velocity
             .clamp_length_max(2.0 * 70.0)
             .lerp(Vec2::ZERO, friction);
-        let new = update_physicsbody(self.pos, &mut self.velocity, delta_time, &world);
+        let new = update_physicsbody(self.pos, &mut self.velocity, delta_time, world);
         self.walking &= self.velocity.length_squared() > 0.1;
         self.pos = new;
         let (tx, ty) = vec2_to_tile(self.pos);
@@ -204,29 +202,28 @@ impl Player {
         if let Some(chunk) = world.interactable.iter().find(|f| f.x == cx && f.y == cy)
             && let Some(tile) = chunk.tile_at((tx - cx) as _, (ty - cy) as _).map(|f| f - 1)
             && tile > -1
+            && tile == 32
         {
-            if tile == 32 {
-                let tiles = get_connected_spawners(&world.interactable, (tx, ty));
-                for ((x, y), tile) in tiles
-                    .into_iter()
-                    .filter(|(p, _)| !self.spawned_spawners.contains(p))
-                {
-                    match tile {
-                        96..111 => {
-                            new_spawned.push((x, y));
-                            let enemy = Enemy::new(
-                                &ENEMIES[tile as usize - 96],
-                                vec2(x as f32 * 16.0, y as f32 * 16.0),
-                            );
-                            enemies.push(enemy);
-                        }
-                        64 => {
-                            if enemies.is_empty() && self.weapon.is_some() {
-                                tile_entities.retain(|p, _| p != &(x, y));
-                            }
-                        }
-                        _ => panic!(),
+            let tiles = get_connected_spawners(&world.interactable, (tx, ty));
+            for ((x, y), tile) in tiles
+                .into_iter()
+                .filter(|(p, _)| !self.spawned_spawners.contains(p))
+            {
+                match tile {
+                    96..111 => {
+                        new_spawned.push((x, y));
+                        let enemy = Enemy::new(
+                            &ENEMIES[tile as usize - 96],
+                            vec2(x as f32 * 16.0, y as f32 * 16.0),
+                        );
+                        enemies.push(enemy);
                     }
+                    64 => {
+                        if enemies.is_empty() && self.weapon.is_some() {
+                            tile_entities.retain(|p, _| p != &(x, y));
+                        }
+                    }
+                    _ => panic!(),
                 }
             }
         }
@@ -248,7 +245,7 @@ impl Player {
         );
         if let Some(weapon) = &self.weapon {
             draw_texture_ex(
-                &assets.weapons.get_at_time(weapon.sprite_index),
+                assets.weapons.get_at_time(weapon.sprite_index),
                 self.pos.x.floor() + 7.0,
                 self.pos.y.floor(),
                 WHITE,

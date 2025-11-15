@@ -116,7 +116,7 @@ impl<'a> Game<'a> {
             if self.player.weapon.is_none() {
                 can_take_weapon = true;
                 draw_texture_ex(
-                    &self.assets.weapons.get_at_time(0),
+                    self.assets.weapons.get_at_time(0),
                     self.locker_pos.x + 8.0 + 1.0,
                     self.locker_pos.y - 10.0,
                     WHITE,
@@ -168,11 +168,10 @@ impl<'a> Game<'a> {
             },
         );
         ui::draw_ui(self.assets, can_take_weapon, &self.player);
-        if can_take_weapon {
-            if is_key_pressed(KeyCode::E) {
+        if can_take_weapon
+            && is_key_pressed(KeyCode::E) {
                 self.player.weapon = Some(&GUN)
             }
-        }
     }
 }
 #[macroquad::main("space splatter")]
